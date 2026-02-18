@@ -5,6 +5,11 @@ on:
     workflows: ["Nightly Build"]
     types:
       - completed
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Nightly Build run ID to sync from'
+        required: true
 
 permissions:
   contents: read
@@ -12,7 +17,7 @@ permissions:
 
 jobs:
   aur-sync:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     container:
       image: archlinux:base-devel
@@ -39,16 +44,20 @@ jobs:
       - name: Wait for build info artifact
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ID: ${{ github.event.inputs.run_id || github.event.workflow_run.id }}
           REPO: ${{ github.repository }}
         run: |
-          ./scripts/wait-for-build-info.py
+          url="$(./scripts/wait-for-build-info.py)"
+          printf '%s\n' "$url" > build-info.url
 
       - name: Download build info
-        uses: actions/download-artifact@v4
-        with:
-          run-id: ${{ github.event.workflow_run.id }}
-          name: build-info
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          url="$(cat build-info.url)"
+          curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
+            "$url" -o build-info.zip
+          bsdtar -xf build-info.zip
 
       - name: Check build info
         id: buildinfo

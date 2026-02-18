@@ -45,7 +45,11 @@ def main() -> int:
                 data = {}
             for a in data.get("artifacts", []):
                 if a.get("name") == "build-info" and not a.get("expired", False):
-                    return 0
+                    url = a.get("archive_download_url")
+                    if url:
+                        print(url)
+                        return 0
+                    break
 
         time.sleep(interval)
 

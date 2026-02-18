@@ -1,7 +1,7 @@
 # Maintainer: Gregory Anders <greg at gpanders dot com>
 # Maintainer: Caleb Maclennan <caleb@alerque.com>
 # Contributor: kaij <contact at kaij dot tech>
-# Maintainer (nightly-bin):
+# Maintainer (nightly-bin): jmp0
 
 pkgbase=ghostty-nightly-bin
 pkgname=(ghostty-nightly-bin ghostty-shell-integration-nightly-bin ghostty-terminfo-nightly-bin)
