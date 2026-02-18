@@ -5,12 +5,14 @@
 
 pkgbase=ghostty-nightly-bin
 pkgname=(ghostty-nightly-bin ghostty-shell-integration-nightly-bin ghostty-terminfo-nightly-bin)
-pkgver=20260218.r14511.ga3aa9fa
-pkgrel=2
+pkgver=20260218.r14515.ge1f2073
+pkgrel=1
 pkgdesc="Fast, native, feature-rich terminal emulator pushing modern features"
 arch=(x86_64)
 url="https://github.com/ghostty-org/ghostty"
 license=(MIT)
+# Use release-specific local source names so makepkg/paru never reuses stale nightly archives.
+_source_rev="${pkgver}-${pkgrel}"
 depends=(
   bzip2
   fontconfig
@@ -30,14 +32,14 @@ depends=(
   zlib
 )
 source=(
-  "ghostty-nightly-bin-x86_64.tar.zst::https://github.com/jpenilla/ghostty-nightly-bin/releases/download/nightly/ghostty-nightly-bin-x86_64.tar.zst"
-  "ghostty-terminfo-nightly-bin-x86_64.tar.zst::https://github.com/jpenilla/ghostty-nightly-bin/releases/download/nightly/ghostty-terminfo-nightly-bin-x86_64.tar.zst"
-  "ghostty-shell-integration-nightly-bin-x86_64.tar.zst::https://github.com/jpenilla/ghostty-nightly-bin/releases/download/nightly/ghostty-shell-integration-nightly-bin-x86_64.tar.zst"
+  "ghostty-nightly-bin-${_source_rev}-x86_64.tar.zst::https://github.com/jpenilla/ghostty-nightly-bin/releases/download/nightly/ghostty-nightly-bin-x86_64.tar.zst"
+  "ghostty-terminfo-nightly-bin-${_source_rev}-x86_64.tar.zst::https://github.com/jpenilla/ghostty-nightly-bin/releases/download/nightly/ghostty-terminfo-nightly-bin-x86_64.tar.zst"
+  "ghostty-shell-integration-nightly-bin-${_source_rev}-x86_64.tar.zst::https://github.com/jpenilla/ghostty-nightly-bin/releases/download/nightly/ghostty-shell-integration-nightly-bin-x86_64.tar.zst"
 )
 sha256sums=(
-  '730c6c0b6a7e9b98c2afa923a1d3cf4760d75b10309bd9ca60703c4e63e4753b'
-  '1aaf4b3c00fad70ddef6ffb5417164cb72889784ecf1988cb11685d1cce08693'
-  'ee7b80c708fe33eca9771340a13a850fd9f70f5f8641b01435be3fd3fe0cdc12'
+  'b2ee102e28076bcf98dbf00bceb562b4d9372a84263dad8fd4459004882db2b4'
+  '8c1689404ddc675bc529b98a15813272ef8b48ba6152a6901f2520c9fc2dad01'
+  '39348f315b6393b4483b790ff5e30bac6acca2ae8efef32647e0b893453cd6f6'
 )
 
 package_ghostty-nightly-bin() {
@@ -45,7 +47,7 @@ package_ghostty-nightly-bin() {
   provides=("ghostty=$pkgver")
   conflicts=(ghostty ghostty-git)
 
-  bsdtar -xf "${srcdir}/ghostty-nightly-bin-x86_64.tar.zst" -C "$pkgdir"
+  bsdtar -xf "${srcdir}/ghostty-nightly-bin-${_source_rev}-x86_64.tar.zst" -C "$pkgdir"
 }
 
 package_ghostty-shell-integration-nightly-bin() {
@@ -54,7 +56,7 @@ package_ghostty-shell-integration-nightly-bin() {
   provides=("ghostty-shell-integration=$pkgver")
   conflicts=(ghostty-shell-integration ghostty-shell-integration-git)
 
-  bsdtar -xf "${srcdir}/ghostty-shell-integration-nightly-bin-x86_64.tar.zst" -C "$pkgdir"
+  bsdtar -xf "${srcdir}/ghostty-shell-integration-nightly-bin-${_source_rev}-x86_64.tar.zst" -C "$pkgdir"
 }
 
 package_ghostty-terminfo-nightly-bin() {
@@ -63,5 +65,5 @@ package_ghostty-terminfo-nightly-bin() {
   provides=("ghostty-terminfo=$pkgver")
   conflicts=(ghostty-terminfo ghostty-terminfo-git)
 
-  bsdtar -xf "${srcdir}/ghostty-terminfo-nightly-bin-x86_64.tar.zst" -C "$pkgdir"
+  bsdtar -xf "${srcdir}/ghostty-terminfo-nightly-bin-${_source_rev}-x86_64.tar.zst" -C "$pkgdir"
 }
