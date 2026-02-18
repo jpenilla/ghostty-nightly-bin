@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   aur-sync:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: "${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}"
     runs-on: ubuntu-latest
     container:
       image: archlinux:base-devel
@@ -30,7 +30,7 @@ jobs:
       - name: Check secret
         id: secretcheck
         env:
-          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          AUR_SSH_PRIVATE_KEY: "${{ secrets.AUR_SSH_PRIVATE_KEY }}"
         run: |
           if [[ -z "${AUR_SSH_PRIVATE_KEY:-}" ]]; then
             echo "has_secret=false" >> "$GITHUB_OUTPUT"
@@ -43,16 +43,16 @@ jobs:
 
       - name: Wait for build info artifact
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUN_ID: ${{ github.event.inputs.run_id || github.event.workflow_run.id }}
-          REPO: ${{ github.repository }}
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          RUN_ID: "${{ github.event.inputs.run_id || github.event.workflow_run.id }}"
+          REPO: "${{ github.repository }}"
         run: |
           url="$(./scripts/wait-for-build-info.py)"
           printf '%s\n' "$url" > build-info.url
 
       - name: Download build info
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
           url="$(cat build-info.url)"
           curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
@@ -90,13 +90,15 @@ jobs:
         if: steps.buildinfo.outputs.should_run == 'true'
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          ssh-private-key: "${{ secrets.AUR_SSH_PRIVATE_KEY }}"
 
-      - name: Add AUR host key
+      - name: Configure SSH
         if: steps.buildinfo.outputs.should_run == 'true'
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -t rsa,ed25519 aur.archlinux.org >> ~/.ssh/known_hosts
+          chmod 700 ~/.ssh
+          ssh-keyscan -t rsa,ed25519 aur.archlinux.org >> ~/.ssh/known_hosts || true
+          chmod 600 ~/.ssh/known_hosts
 
       - name: Configure git
         if: steps.buildinfo.outputs.should_run == 'true'
@@ -106,6 +108,8 @@ jobs:
 
       - name: Clone AUR repo
         if: steps.buildinfo.outputs.should_run == 'true'
+        env:
+          GIT_SSH_COMMAND: "ssh -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=~/.ssh/known_hosts"
         run: |
           git clone ssh://aur@aur.archlinux.org/ghostty-nightly-bin.git aur
 
