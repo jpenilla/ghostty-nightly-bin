@@ -34,10 +34,37 @@ jobs:
           fi
 
       - name: Download build info
-        uses: actions/download-artifact@v4
-        with:
-          run-id: ${{ github.event.workflow_run.id }}
-          name: build-info
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          api_url="https://api.github.com/repos/${REPO}/actions/runs/${RUN_ID}/artifacts"
+          artifact_url=""
+          for i in {1..10}; do
+            json=$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" "$api_url")
+            artifact_url=$(python3 - <<'PY'
+          import json,sys
+          data=json.loads(sys.stdin.read())
+          for a in data.get("artifacts", []):
+            if a.get("name") == "build-info" and not a.get("expired", False):
+              print(a.get("archive_download_url"))
+              break
+          PY
+            <<< "$json")
+            if [[ -n "${artifact_url}" ]]; then
+              break
+            fi
+            sleep 6
+          done
+          if [[ -z "${artifact_url}" ]]; then
+            echo "build-info artifact not found for run ${RUN_ID}" >&2
+            exit 1
+          fi
+          curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
+            "$artifact_url" -o build-info.zip
+          bsdtar -xf build-info.zip
 
       - name: Check build info
         id: buildinfo
