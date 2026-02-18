@@ -28,6 +28,9 @@ jobs:
             bzip2 fontconfig freetype2 gcc-libs glibc glib2 gtk4 gtk4-layer-shell \
             libx11 harfbuzz libadwaita libpng oniguruma pixman wayland zlib
 
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Clone ghostty
         run: |
           git clone https://github.com/ghostty-org/ghostty.git
