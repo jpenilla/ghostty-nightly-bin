@@ -4,7 +4,12 @@ on:
   schedule:
     - cron: '17 3 * * *'
   workflow_dispatch:
-    {}
+    inputs:
+      force_build:
+        description: "Skip release/version guard and force a build"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -29,9 +34,11 @@ jobs:
 
       - name: Check for new commits
         id: guard
+        env:
+          FORCE_BUILD: ${{ github.event_name == 'workflow_dispatch' && (inputs.force_build || false) }}
         run: |
           set -euo pipefail
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+          if [[ "${FORCE_BUILD}" == "true" ]]; then
             echo "should_build=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -45,15 +52,7 @@ jobs:
             exit 0
           fi
 
-          version_url=$(python3 - <<'PY'
-          import json,sys
-          data=json.loads(sys.stdin.read())
-          for a in data.get("assets", []):
-            if a.get("name") == "ghostty-nightly-version.txt":
-              print(a.get("browser_download_url"))
-              break
-          PY
-          <<< "$json")
+          version_url=$(python3 ./scripts/get-ghostty-nightly-version-url.py <<< "$json")
 
           if [[ -z "${version_url:-}" ]]; then
             echo "should_build=true" >> "$GITHUB_OUTPUT"
