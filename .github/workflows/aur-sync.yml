@@ -1,0 +1,107 @@
+name: AUR Sync
+
+on:
+  workflow_run:
+    workflows: ["Nightly Build"]
+    types:
+      - completed
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  aur-sync:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+    steps:
+      - name: Install deps
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm git python curl openssh rsync
+
+      - name: Check secret
+        id: secretcheck
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          if [[ -z "${AUR_SSH_PRIVATE_KEY:-}" ]]; then
+            echo "has_secret=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_secret=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download build info
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          name: build-info
+
+      - name: Check build info
+        id: buildinfo
+        run: |
+          set -euo pipefail
+          if [[ "${{ steps.secretcheck.outputs.has_secret }}" != "true" ]]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ ! -f build-info.env ]]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # shellcheck disable=SC1091
+          . ./build-info.env
+          if [[ "${should_build:-false}" == "true" ]]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.buildinfo.outputs.should_run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Update PKGBUILD and .SRCINFO
+        if: steps.buildinfo.outputs.should_run == 'true'
+        run: |
+          ./scripts/update-nightly.sh
+
+      - name: Install SSH key for AUR
+        if: steps.buildinfo.outputs.should_run == 'true'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+
+      - name: Configure git
+        if: steps.buildinfo.outputs.should_run == 'true'
+        run: |
+          git config --global user.name "AUR Sync Bot"
+          git config --global user.email "aur-sync@users.noreply.github.com"
+
+      - name: Clone AUR repo
+        if: steps.buildinfo.outputs.should_run == 'true'
+        run: |
+          git clone ssh://aur@aur.archlinux.org/ghostty-nightly-bin.git aur
+
+      - name: Sync packaging files
+        if: steps.buildinfo.outputs.should_run == 'true'
+        run: |
+          rsync -a --delete \
+            PKGBUILD \
+            .SRCINFO \
+            LICENSE \
+            aur/
+
+      - name: Commit and push
+        if: steps.buildinfo.outputs.should_run == 'true'
+        run: |
+          cd aur
+          if git diff --quiet; then
+            echo "No changes to push"
+            exit 0
+          fi
+          git add PKGBUILD .SRCINFO LICENSE
+          git commit -m "Update ghostty-nightly-bin"
+          git push

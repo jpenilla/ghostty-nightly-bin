@@ -1,0 +1,166 @@
+name: Nightly Build
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    {}
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux-x86_64:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+    steps:
+      - name: Install build deps
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm \
+            git python curl zstd zig pandoc-cli blueprint-compiler \
+            bzip2 fontconfig freetype2 gcc-libs glibc glib2 gtk4 gtk4-layer-shell \
+            libx11 harfbuzz libadwaita libpng oniguruma pixman wayland zlib
+
+      - name: Clone ghostty
+        run: |
+          git clone https://github.com/ghostty-org/ghostty.git
+
+      - name: Check for new commits
+        id: guard
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          cd ghostty
+          head_short=$(git rev-parse --short=7 HEAD)
+          cd ..
+
+          api_url="https://api.github.com/repos/jpenilla/ghostty-nightly-bin/releases/tags/nightly"
+          if ! json=$(curl -fsSL "$api_url"); then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          version_url=$(python3 - <<'PY'
+          import json,sys
+          data=json.loads(sys.stdin.read())
+          for a in data.get("assets", []):
+            if a.get("name") == "ghostty-nightly-version.txt":
+              print(a.get("browser_download_url"))
+              break
+          PY
+          <<< "$json")
+
+          if [[ -z "${version_url:-}" ]]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          last_ver=$(curl -fsSL "$version_url" || true)
+          if [[ -z "$last_ver" ]]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "$last_ver" =~ g([0-9a-f]{7}) ]]; then
+            last_short="${BASH_REMATCH[1]}"
+          else
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "$last_short" == "$head_short" ]]; then
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write build info
+        run: |
+          echo "should_build=${{ steps.guard.outputs.should_build }}" > build-info.env
+
+      - name: Compute version
+        id: ver
+        if: steps.guard.outputs.should_build == 'true'
+        run: |
+          cd ghostty
+          count=$(git rev-list --count HEAD)
+          sha=$(git rev-parse --short=7 HEAD)
+          base="r${count}.g${sha}"
+          date=$(date -u +%Y%m%d)
+          ver="${date}.${base}"
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+          printf '%s' "$ver" > ../ghostty-nightly-version.txt
+
+      - name: Append version info
+        if: steps.guard.outputs.should_build == 'true'
+        run: |
+          echo "version=${{ steps.ver.outputs.version }}" >> build-info.env
+
+      - name: Upload build info
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-info
+          path: build-info.env
+
+      - name: Build
+        if: steps.guard.outputs.should_build == 'true'
+        run: |
+          cd ghostty
+          ZIG_GLOBAL_CACHE_DIR="$PWD/zig-global-cache" ./nix/build-support/fetch-zig-cache.sh
+          DESTDIR=build zig build \
+            --summary all \
+            --prefix "/usr" \
+            --system "$PWD/zig-global-cache/p" \
+            -Doptimize=ReleaseFast \
+            -Dgtk-wayland=true \
+            -Dgtk-x11=true \
+            -Dcpu=baseline \
+            -Dpie=true \
+            -Demit-docs \
+            -Dversion-string="0.0.0-${{ steps.ver.outputs.version }}.aur-ghostty-nightly-bin"
+
+      - name: Package artifacts
+        if: steps.guard.outputs.should_build == 'true'
+        run: |
+          mkdir -p out/main out/terminfo out/shell
+          cp -a ghostty/build/* out/main/
+
+          mkdir -p out/main/usr/share/licenses/ghostty-nightly-bin
+          cp ghostty/LICENSE out/main/usr/share/licenses/ghostty-nightly-bin/
+
+          if [[ -d out/main/usr/share/terminfo ]]; then
+            mkdir -p out/terminfo/usr/share
+            mkdir -p out/terminfo/usr/share/terminfo
+            cp -a out/main/usr/share/terminfo/x out/terminfo/usr/share/terminfo/
+            rm -rf out/main/usr/share/terminfo
+          fi
+
+          if [[ -d out/main/usr/share/ghostty/shell-integration ]]; then
+            mkdir -p out/shell/usr/share/ghostty
+            cp -a out/main/usr/share/ghostty/shell-integration out/shell/usr/share/ghostty/
+            rm -rf out/main/usr/share/ghostty/shell-integration
+          fi
+
+          tar --zstd -cf ghostty-nightly-bin-x86_64.tar.zst -C out/main .
+          tar --zstd -cf ghostty-terminfo-nightly-bin-x86_64.tar.zst -C out/terminfo .
+          tar --zstd -cf ghostty-shell-integration-nightly-bin-x86_64.tar.zst -C out/shell .
+
+      - name: Publish rolling release
+        if: steps.guard.outputs.should_build == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: Nightly
+          prerelease: true
+          files: |
+            ghostty-nightly-version.txt
+            ghostty-nightly-bin-x86_64.tar.zst
+            ghostty-terminfo-nightly-bin-x86_64.tar.zst
+            ghostty-shell-integration-nightly-bin-x86_64.tar.zst
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

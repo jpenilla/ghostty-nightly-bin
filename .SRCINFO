@@ -1,0 +1,48 @@
+pkgbase = ghostty-nightly-bin
+	pkgdesc = Fast, native, feature-rich terminal emulator pushing modern features
+	pkgver = 20260218.r0.g0000000
+	pkgrel = 1
+	url = https://github.com/ghostty-org/ghostty
+	arch = x86_64
+	license = MIT
+	depends = bzip2
+	depends = fontconfig
+	depends = freetype2
+	depends = gcc-libs
+	depends = glibc
+	depends = glib2
+	depends = gtk4
+	depends = gtk4-layer-shell
+	depends = libx11
+	depends = harfbuzz
+	depends = libadwaita
+	depends = libpng
+	depends = oniguruma
+	depends = pixman
+	depends = wayland
+	depends = zlib
+	source = ghostty-nightly-bin-x86_64.tar.zst::https://github.com/jpenilla/ghostty-nightly-bin/releases/download/nightly/ghostty-nightly-bin-x86_64.tar.zst
+	source = ghostty-terminfo-nightly-bin-x86_64.tar.zst::https://github.com/jpenilla/ghostty-nightly-bin/releases/download/nightly/ghostty-terminfo-nightly-bin-x86_64.tar.zst
+	source = ghostty-shell-integration-nightly-bin-x86_64.tar.zst::https://github.com/jpenilla/ghostty-nightly-bin/releases/download/nightly/ghostty-shell-integration-nightly-bin-x86_64.tar.zst
+	sha256sums = SKIP
+	sha256sums = SKIP
+	sha256sums = SKIP
+
+pkgname = ghostty-nightly-bin
+	depends = ghostty-shell-integration-nightly-bin
+	depends = ghostty-terminfo-nightly-bin
+	provides = ghostty=20260218.r0.g0000000
+	conflicts = ghostty
+	conflicts = ghostty-git
+
+pkgname = ghostty-shell-integration-nightly-bin
+	pkgdesc = Shell integration scripts for ghostty
+	provides = ghostty-shell-integration=20260218.r0.g0000000
+	conflicts = ghostty-shell-integration
+	conflicts = ghostty-shell-integration-git
+
+pkgname = ghostty-terminfo-nightly-bin
+	pkgdesc = Terminfo for ghostty
+	provides = ghostty-terminfo=20260218.r0.g0000000
+	conflicts = ghostty-terminfo
+	conflicts = ghostty-terminfo-git
