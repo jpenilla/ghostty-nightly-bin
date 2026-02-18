@@ -1,0 +1,54 @@
+name: AUR Sync (Disabled)
+
+on:
+  push:
+    paths:
+      - PKGBUILD
+      - .SRCINFO
+      - .install
+      - LICENSE
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  aur-sync:
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install SSH key for AUR
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+
+      - name: Configure git
+        run: |
+          git config --global user.name "AUR Sync Bot"
+          git config --global user.email "aur-sync@users.noreply.github.com"
+
+      - name: Clone AUR repo
+        run: |
+          git clone ssh://aur@aur.archlinux.org/ghostty-nightly-bin.git aur
+
+      - name: Sync packaging files
+        run: |
+          rsync -a --delete \
+            PKGBUILD \
+            .SRCINFO \
+            LICENSE \
+            aur/
+
+      - name: Commit and push
+        run: |
+          cd aur
+          if git diff --quiet; then
+            echo "No changes to push"
+            exit 0
+          fi
+          git add PKGBUILD .SRCINFO LICENSE
+          git commit -m "Update ghostty-nightly-bin"
+          git push
