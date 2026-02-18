@@ -82,7 +82,9 @@ jobs:
       - name: Update PKGBUILD and .SRCINFO
         if: steps.buildinfo.outputs.should_run == 'true'
         run: |
-          ./scripts/update-nightly.sh
+          useradd -m build
+          chown -R build:build "$GITHUB_WORKSPACE"
+          su -s /bin/bash -c "./scripts/update-nightly.sh" build
 
       - name: Install SSH key for AUR
         if: steps.buildinfo.outputs.should_run == 'true'
