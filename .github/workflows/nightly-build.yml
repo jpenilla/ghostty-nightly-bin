@@ -28,6 +28,16 @@ jobs:
             bzip2 fontconfig freetype2 gcc-libs glibc glib2 gtk4 gtk4-layer-shell \
             libx11 harfbuzz libadwaita libpng oniguruma pixman wayland zlib
 
+          # Temporary workaround for Zig 0.15.2's linker not understanding SFrame
+          # relocations emitted in Arch/CachyOS glibc startup objects. This currently
+          # breaks C-linked Zig builds with `unhandled relocation type R_X86_64_PC64`
+          # in crt1.o:.sframe. Remove once Zig supports it; tracking issue:
+          # https://codeberg.org/ziglang/zig/issues/31272
+          for crt in /usr/lib/crt1.o /usr/lib/Scrt1.o /usr/lib/rcrt1.o; do
+            objcopy --remove-section .sframe "$crt" "$crt.tmp"
+            mv "$crt.tmp" "$crt"
+          done
+
       - name: Checkout repository
         uses: actions/checkout@v6
 
