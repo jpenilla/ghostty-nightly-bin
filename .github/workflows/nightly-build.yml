@@ -125,7 +125,7 @@ jobs:
 
       - name: Cache zig deps
         if: steps.guard.outputs.should_build == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ghostty/zig-global-cache
           key: zig-global-cache-${{ runner.os }}-${{ hashFiles('ghostty/build.zig.zon', 'ghostty/build.zig.zon.txt') }}
