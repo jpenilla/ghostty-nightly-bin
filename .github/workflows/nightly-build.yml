@@ -109,11 +109,6 @@ jobs:
           name: build-info
           path: build-info.env
 
-      - name: Get Zig version
-        if: steps.guard.outputs.should_build == 'true'
-        id: zig
-        run: echo "version=$(zig version)" >> "$GITHUB_OUTPUT"
-
       - name: Cache zig deps
         if: steps.guard.outputs.should_build == 'true'
         uses: actions/cache@v6
@@ -121,9 +116,9 @@ jobs:
           path: |
             ghostty/zig-global-cache
             ghostty/zig-pkg
-          # Zig package hashes can change between compiler versions. Only restore a
-          # cache created by the same Zig version and dependency manifest.
-          key: zig-global-cache-${{ runner.os }}-zig-${{ steps.zig.outputs.version }}-${{ hashFiles('ghostty/build.zig.zon', 'ghostty/build.zig.zon.txt') }}
+          key: zig-global-cache-${{ runner.os }}-${{ hashFiles('ghostty/build.zig.zon', 'ghostty/build.zig.zon.txt') }}
+          restore-keys: |
+            zig-global-cache-${{ runner.os }}-
 
       - name: Build
         if: steps.guard.outputs.should_build == 'true'
