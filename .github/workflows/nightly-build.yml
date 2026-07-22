@@ -24,23 +24,9 @@ jobs:
         run: |
           pacman -Syu --noconfirm
           pacman -S --noconfirm \
-            git python curl zstd pandoc-cli blueprint-compiler \
+            git python curl zstd zig pandoc-cli blueprint-compiler \
             bzip2 fontconfig freetype2 gcc-libs glibc glib2 gtk4 gtk4-layer-shell \
             libx11 harfbuzz libadwaita libpng oniguruma pixman wayland zlib
-
-          # Pin Zig to 0.15.2 — ghostty is not yet compatible with 0.16.0
-          curl -LO https://archive.archlinux.org/packages/z/zig/zig-0.15.2-3-x86_64.pkg.tar.zst
-          pacman -U --noconfirm zig-0.15.2-3-x86_64.pkg.tar.zst
-
-          # Temporary workaround for Zig 0.15.2's linker not understanding SFrame
-          # relocations emitted in Arch/CachyOS glibc startup objects. This currently
-          # breaks C-linked Zig builds with `unhandled relocation type R_X86_64_PC64`
-          # in crt1.o:.sframe. Remove once Zig supports it; tracking issue:
-          # https://codeberg.org/ziglang/zig/issues/31272
-          for crt in /usr/lib/crt1.o /usr/lib/Scrt1.o /usr/lib/rcrt1.o; do
-            objcopy --remove-section .sframe "$crt" "$crt.tmp"
-            mv "$crt.tmp" "$crt"
-          done
 
       - name: Checkout repository
         uses: actions/checkout@v7
