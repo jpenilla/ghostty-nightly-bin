@@ -118,7 +118,9 @@ jobs:
         if: steps.guard.outputs.should_build == 'true'
         uses: actions/cache@v6
         with:
-          path: ghostty/zig-global-cache
+          path: |
+            ghostty/zig-global-cache
+            ghostty/zig-pkg
           # Zig package hashes can change between compiler versions. Only restore a
           # cache created by the same Zig version and dependency manifest.
           key: zig-global-cache-${{ runner.os }}-zig-${{ steps.zig.outputs.version }}-${{ hashFiles('ghostty/build.zig.zon', 'ghostty/build.zig.zon.txt') }}
@@ -127,11 +129,11 @@ jobs:
         if: steps.guard.outputs.should_build == 'true'
         run: |
           cd ghostty
-          ZIG_GLOBAL_CACHE_DIR="$PWD/zig-global-cache" ./nix/build-support/fetch-zig-cache.sh
+          export ZIG_GLOBAL_CACHE_DIR="$PWD/zig-global-cache"
+          ./nix/build-support/fetch-zig-cache.sh
           DESTDIR=build zig build \
             --summary all \
             --prefix "/usr" \
-            --system "$PWD/zig-global-cache/p" \
             -Doptimize=ReleaseFast \
             -Dgtk-wayland=true \
             -Dgtk-x11=true \
