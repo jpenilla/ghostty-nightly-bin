@@ -4,34 +4,18 @@ set -euo pipefail
 repo="jpenilla/ghostty-nightly-bin"
 release_tag="nightly"
 
-api_url="https://api.github.com/repos/${repo}/releases/tags/${release_tag}"
-
 tmpdir="$(mktemp -d)"
 cleanup() { rm -rf "$tmpdir"; }
 trap cleanup EXIT
 
-json="$tmpdir/release.json"
-
-curl -fsSL "$api_url" -o "$json"
-
-version_url=$(python3 - "$json" <<'PY'
-import json,sys
-path=sys.argv[1]
-with open(path,"r",encoding="utf-8") as f:
-  data=json.load(f)
-for a in data.get("assets",[]):
-  if a.get("name") == "ghostty-nightly-version.txt":
-    print(a.get("browser_download_url"))
-    break
-PY
-)
-
-if [[ -z "${version_url}" ]]; then
-  echo "error: ghostty-nightly-version.txt not found in release assets" >&2
-  exit 1
-fi
+version_url="https://github.com/${repo}/releases/download/${release_tag}/ghostty-nightly-version.txt"
 
 pkgver=$(curl -fsSL "$version_url" | tr -d '\n' | tr -d '\r')
+
+if [[ -z "${pkgver}" ]]; then
+  echo "error: could not determine nightly version" >&2
+  exit 1
+fi
 
 current_pkgver=$(awk -F= '/^pkgver=/{print $2}' PKGBUILD)
 current_pkgrel=$(awk -F= '/^pkgrel=/{print $2}' PKGBUILD)

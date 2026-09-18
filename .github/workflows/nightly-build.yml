@@ -49,18 +49,7 @@ jobs:
           head_short=$(git rev-parse --short=7 HEAD)
           cd ..
 
-          api_url="https://api.github.com/repos/jpenilla/ghostty-nightly-bin/releases/tags/nightly"
-          if ! json=$(curl -fsSL "$api_url"); then
-            echo "should_build=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          version_url=$(python3 ./scripts/get-ghostty-nightly-version-url.py <<< "$json")
-
-          if [[ -z "${version_url:-}" ]]; then
-            echo "should_build=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+          version_url="https://github.com/jpenilla/ghostty-nightly-bin/releases/download/nightly/ghostty-nightly-version.txt"
 
           last_ver=$(curl -fsSL "$version_url" || true)
           if [[ -z "$last_ver" ]]; then
