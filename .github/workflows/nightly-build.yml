@@ -101,7 +101,6 @@ jobs:
         with:
           path: |
             ghostty/zig-global-cache
-            ghostty/zig-pkg
           key: zig-global-cache-${{ runner.os }}-${{ hashFiles('ghostty/build.zig.zon', 'ghostty/build.zig.zon.txt') }}
           restore-keys: |
             zig-global-cache-${{ runner.os }}-
@@ -112,7 +111,7 @@ jobs:
           cd ghostty
           export ZIG_GLOBAL_CACHE_DIR="$PWD/zig-global-cache"
           for attempt in 1 2 3 4; do
-            if ./nix/build-support/fetch-zig-cache.sh; then
+            if zig build --fetch=all; then
               break
             fi
             if [ "$attempt" -eq 4 ]; then
