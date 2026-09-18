@@ -10,7 +10,8 @@ trap cleanup EXIT
 
 version_url="https://github.com/${repo}/releases/download/${release_tag}/ghostty-nightly-version.txt"
 
-pkgver=$(curl -fsSL "$version_url" | tr -d '\n' | tr -d '\r')
+curl -fsSL --retry 3 --retry-all-errors "$version_url" -o "$tmpdir/version.txt"
+pkgver=$(tr -d '\n\r' < "$tmpdir/version.txt")
 
 if [[ -z "${pkgver}" ]]; then
   echo "error: could not determine nightly version" >&2
@@ -42,7 +43,7 @@ if ! command -v sha256sum >/dev/null 2>&1; then
 fi
 for asset in "${assets[@]}"; do
   url="https://github.com/${repo}/releases/download/${release_tag}/${asset}"
-  curl -fsSL "$url" -o "$tmpdir/$asset"
+  curl -fsSL --retry 3 --retry-all-errors "$url" -o "$tmpdir/$asset"
   sha256sums+=("$($sha_cmd "$tmpdir/$asset" | awk '{print $1}')")
 done
 

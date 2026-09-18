@@ -51,17 +51,14 @@ jobs:
 
           version_url="https://github.com/jpenilla/ghostty-nightly-bin/releases/download/nightly/ghostty-nightly-version.txt"
 
-          last_ver=$(curl -fsSL "$version_url" || true)
-          if [[ -z "$last_ver" ]]; then
-            echo "should_build=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+          curl -fsSL --retry 3 --retry-all-errors "$version_url" -o "$RUNNER_TEMP/last-ver.txt"
+          last_ver=$(cat "$RUNNER_TEMP/last-ver.txt")
 
           if [[ "$last_ver" =~ g([0-9a-f]{7}) ]]; then
             last_short="${BASH_REMATCH[1]}"
           else
-            echo "should_build=true" >> "$GITHUB_OUTPUT"
-            exit 0
+            echo "error: could not parse nightly version from: $last_ver" >&2
+            exit 1
           fi
 
           if [[ "$last_short" == "$head_short" ]]; then

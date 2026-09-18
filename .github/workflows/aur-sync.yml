@@ -55,7 +55,8 @@ jobs:
           GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
           url="$(cat build-info.url)"
-          curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
+          curl -fsSL --retry 3 --retry-all-errors \
+            -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
             "$url" -o build-info.zip
           bsdtar -xf build-info.zip
 
@@ -97,7 +98,7 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          ssh-keyscan -t rsa,ed25519 aur.archlinux.org >> ~/.ssh/known_hosts || true
+          ssh-keyscan -t rsa,ed25519 aur.archlinux.org >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
       - name: Configure git
