@@ -106,12 +106,28 @@ jobs:
           restore-keys: |
             zig-global-cache-${{ runner.os }}-
 
+      - name: Fetch Zig dependencies
+        if: steps.guard.outputs.should_build == 'true'
+        run: |
+          cd ghostty
+          export ZIG_GLOBAL_CACHE_DIR="$PWD/zig-global-cache"
+          for attempt in 1 2 3 4; do
+            if ./nix/build-support/fetch-zig-cache.sh; then
+              break
+            fi
+            if [ "$attempt" -eq 4 ]; then
+              echo "dependency fetch failed after 3 retries" >&2
+              exit 1
+            fi
+            echo "dependency fetch failed (attempt $attempt); retrying..." >&2
+            sleep $((attempt * 10))
+          done
+
       - name: Build
         if: steps.guard.outputs.should_build == 'true'
         run: |
           cd ghostty
           export ZIG_GLOBAL_CACHE_DIR="$PWD/zig-global-cache"
-          ./nix/build-support/fetch-zig-cache.sh
           DESTDIR=build zig build \
             --summary all \
             --prefix "/usr" \
