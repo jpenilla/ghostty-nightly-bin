@@ -24,16 +24,9 @@ jobs:
         run: |
           pacman -Syu --noconfirm
           pacman -S --noconfirm \
-            git python curl zstd pandoc-cli blueprint-compiler \
+            git python curl zstd zig pandoc-cli blueprint-compiler \
             bzip2 fontconfig freetype2 gcc-libs glibc glib2 gtk4 gtk4-layer-shell \
             libx11 harfbuzz libadwaita libpng oniguruma pixman wayland zlib
-
-          # Temporary pin: Ghostty requires Zig 0.16.0, not 0.17.0.
-          curl -fL --retry 3 --retry-all-errors \
-            https://archive.archlinux.org/packages/z/zig/zig-0.16.0-1-x86_64.pkg.tar.zst \
-            -o zig.pkg.tar.zst
-          pacman -U --noconfirm zig.pkg.tar.zst
-          zig version
 
       - name: Checkout repository
         uses: actions/checkout@v7
